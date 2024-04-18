@@ -78,7 +78,20 @@
                 label-align="left"
                 label-placement="left"
               >
-                <n-form-item label="上下文关联" path="context">
+                <n-form-item path="context">
+                  <template #label>
+                    <div class="flex justify-start items-center">
+                      <span>上下文关联</span>
+                      <n-tooltip trigger="hover" placement="top">
+                        <template #trigger>
+                          <n-icon size="18" class="pb-5 pl-1 cursor-pointer box-border">
+                            <help-circle />
+                          </n-icon>
+                        </template>
+                        为了节省OpenAI API请求费用 最大关联6组对话
+                      </n-tooltip>
+                    </div>
+                  </template>
                   <div class="w-full flex justify-end">
                     <n-switch
                       v-model:value="modalConfig.modalSetting.form.general.context"
@@ -108,7 +121,7 @@
                   <template #label>
                     <div class="flex justify-start items-center">
                       <span>可用次数</span>
-                      <n-tooltip trigger="hover" placement="bottom">
+                      <n-tooltip trigger="hover" placement="top">
                         <template #trigger>
                           <n-icon size="18" class="pb-5 pl-1 cursor-pointer box-border">
                             <help-circle />

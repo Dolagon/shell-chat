@@ -26,9 +26,11 @@
                 </div>
                 <n-avatar v-if="item.role === 'user'" round size="small" :src="chatRole[item.role].avatar" />
               </div>
+              <!-- stream loading -->
               <div v-if="item.role === 'assistant' && isLoading('stream') && index === dataList.length - 1" class="w-full pt-2.5 pl-10 box-border">
                 <n-spin size="small" />
               </div>
+              <!-- text copy -->
               <div v-if="item.role === 'assistant' && item.content && !isLoading('stream') && typeof item.content !== 'string'" class="w-full flex justify-between items-center h-6 pl-9 pr-12 pt-1 box-border opacity-0 transition-opacity duration-300 copy-text">
                 <n-button ghost text :focusable="false" @click="handleCopy(item.content)">
                   <template #icon>
@@ -45,7 +47,7 @@
         </n-list>
       </n-scrollbar>
       <div v-else class="w-full h-full flex flex-col justify-center items-center">
-        <div :class="`w-full h-40 flex flex-col justify-around items-center ${base.isMobile ? 'mt-20' : 'mt-60'}`">
+        <div :class="`w-full h-40 flex flex-col justify-around items-center ${base.isMobile ? 'mt-1' : 'mt-60'}`">
           <chat-gpt-svg size="40" />
           <div class="mb-5 text-2xl font-medium">How can I help you today?</div>
         </div>

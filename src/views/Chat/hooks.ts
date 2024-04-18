@@ -14,6 +14,7 @@ import { fetchEventSource } from '@microsoft/fetch-event-source';
 import { start } from 'nprogress';
 import useBaseStore from '@/store/base.ts';
 import chatgptImg from '@/assets/images/chatgpt.png';
+import { cloneDeep } from 'lodash';
 
 interface RoleOptionsState {
   avatar: ComputedRef<string> | string;
@@ -77,7 +78,12 @@ export const useChat = () => {
     const separator = '<div style="height: 1px;background-color: #BDBDBD; margin: 20px 0;"></div>';
     for (let i = 0; i < parts.length; i++) {
       if (i % 2 === 0) {
-        const content = parts[i]
+        let str = parts[i];
+        if (/<[^>]+>/g.test(str) && !/\s<[^>]+>/.test(str)) {
+          // 解答内容或包含不需要转义的标签
+          str = str.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+        const content = str
         .replace(/`([^`]+)`/g, blobFont) // 加粗字体
         .replace(/\*\*(.*?)\*\*/g, blobFont) // 加粗字体
         .replace(/---/g, separator) // 分割线
@@ -91,9 +97,10 @@ export const useChat = () => {
         });
       } else {
         const index = parts[i].indexOf('\n');
-        const language = index !== -1 ? parts[i].substring(0, index) : parts[i]; // 获取语言
+        let language = (index !== -1 ? parts[i].substring(0, index) : parts[i]) || 'bash'; // 获取语言
         const code = index !== -1 ? parts[i].substring(index + 1) : ''; // 获取代码
         const text = code.replace(/\n+$/, ''); // 删除末尾换行
+        language = language === 'vue' ? 'html' : language;
         formatted.push({
           type: language,
           content: Prism.highlight(text, Prism.languages[language], language)
@@ -142,11 +149,13 @@ export const useChat = () => {
         resolve();
       }, 300);
     });
+    const tempDataList = cloneDeep(dataList.value);
+    tempDataList.pop();
     const payload: CompletionsChatData = {
       chatId: newChat ? null : chatId.value,
       model,
       stream,
-      messages: openContext ? dataList.value.slice(MAX_CONTEXT_NUM).filter(({ content }) => !!content).map(({ content, role }) => ({
+      messages: openContext ? tempDataList.slice(MAX_CONTEXT_NUM).map(({ content, role }) => ({
         role,
         content: typeof content === 'string' ? content : content.map(item => item.content).join('\n')
       })) : [{ role: 'user', content: text as string }]
@@ -159,6 +168,7 @@ export const useChat = () => {
       const { signal } = controller;
       let contentStr = '';
       const errControl = (err: string) => {
+        console.log('errControl', err);
         message.error(err);
         endLoading('answer');
         endLoading('stream');
@@ -177,16 +187,24 @@ export const useChat = () => {
           if (chunk?.err) return errControl(chunk.err);
           const content = chunk.choices[0]?.delta?.content || '';
           contentStr += content;
-          dataList.value[lastIndex] = {
-            content: assistantContentEffect(contentStr),
-            role: 'assistant',
-            createTime: chunk?.createTime
+          try {
+            dataList.value[lastIndex] = {
+              content: assistantContentEffect(contentStr),
+              role: 'assistant',
+              createTime: chunk?.createTime
+            }
+          } catch (e) {
+            controller.abort();
+            errControl(e + '');
+            throw e;
           }
+          console.log('nextTick', nextTick);
           nextTick(async () => {
             Prism.highlightAll();
-            scrollEnd();
+            if (content.includes('\n')) scrollEnd('auto');
           });
           if (chunk.choices[0]?.finish_reason === 'stop') {
+            scrollEnd('auto');
             controller.abort();
             // 请求完毕
             endLoading('stream');
@@ -220,6 +238,7 @@ export const useChat = () => {
         if (newChat) await reloadList();
       });
     } catch (e) {
+      message.error(e + '');
       // 删除报错对话
       dataList.value.splice(-2);
     }  finally {
@@ -279,6 +298,8 @@ export const useChat = () => {
             Prism.highlightAll();
             scrollEnd('auto');
           });
+        } catch (e) {
+          message.error(e + '');
         } finally {
           endLoading('main');
           scrollEnd();

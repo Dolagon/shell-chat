@@ -6,7 +6,7 @@ export const USERNAME_LIMIT = 13;
 
 export const PWD_LIMIT = 20;
 
-export const MAX_CONTEXT_NUM = -6;
+export const MAX_CONTEXT_NUM = -12;
 
 export const BASE_URL = import.meta.env.VITE_APP_BASE_API;
 
